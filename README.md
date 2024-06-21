@@ -5,6 +5,7 @@ Project Outline: Training Intensity Analyzer with OpenAI API
 Monitor your workout data (heart rate, speed, distance, etc.).
 Use AI to analyze whether you are training too hard, too easy, or just right.
 Provide real-time feedback and suggestions for adjustment.
+Similar to the Garmin Training Effect feature, but utilizies my knowledge of running, vo2 max, sprinting and such to show if I am training at the correct level.
 2. Collect Training Data
 Gather data from fitness devices (heart rate monitors, smartwatches, etc.).
 Store data including heart rate, speed, distance, time, and any subjective measures of effort (e.g., RPE - Rate of Perceived Exertion).
