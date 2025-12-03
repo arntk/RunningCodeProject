@@ -19,5 +19,45 @@ services:
     ports:
       - "8080:8080"
 
+  garmin-worker:
+    build: ./garmin-worker
+    container_name: aerofit_garmin_worker
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/aerofit
+    depends_on:
+      - db
+
+  analytics_engine:
+    build: ./analytics_engine
+    container_name: aerofit_analytics_engine
+    restart: always
+    command: python api.py
+    ports:
+      - "5001:5001"
+
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/aerofit
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      - ./analytics_engine:/app
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: aerofit_frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5001
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - analytics_engine
+
 volumes:
   postgres_data:

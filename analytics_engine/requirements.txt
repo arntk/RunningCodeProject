@@ -1,0 +1,8 @@
+pandas
+scikit-learn
+garminconnect
+psycopg2-binary
+sqlalchemy
+openai
+flask
+flask-cors

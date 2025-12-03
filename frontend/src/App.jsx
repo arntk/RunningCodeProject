@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './App.css'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import GarminLogin from './GarminLogin';
 
 function App() {
   const [data, setData] = useState([
@@ -21,21 +22,25 @@ function App() {
       </header>
 
       <main className="dashboard">
-        <div className="card">
-          <h2>Heart Rate & Speed</h2>
-          <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer>
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="hr" stroke="#ff0000" name="Heart Rate (bpm)" />
-                <Line yAxisId="right" type="monotone" dataKey="speed" stroke="#8884d8" name="Speed (km/h)" />
-              </LineChart>
-            </ResponsiveContainer>
+        <div className="left-column">
+          <GarminLogin />
+
+          <div className="card">
+            <h2>Heart Rate & Speed</h2>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer>
+                <LineChart data={data}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip />
+                  <Legend />
+                  <Line yAxisId="left" type="monotone" dataKey="hr" stroke="#ff0000" name="Heart Rate (bpm)" />
+                  <Line yAxisId="right" type="monotone" dataKey="speed" stroke="#8884d8" name="Speed (km/h)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
