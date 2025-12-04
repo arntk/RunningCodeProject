@@ -53,7 +53,7 @@ def get_garmin_client(email=None, password=None):
         logger.error(f"Failed to authenticate with Garmin: {e}")
         raise
 
-def process_activities(email=None, password=None):
+def fetch_garmin_data(email=None, password=None):
     try:
         Session = init_db()
         session = Session()
@@ -152,6 +152,7 @@ def process_activities(email=None, password=None):
         
     except Exception as e:
         logger.error(f"An error occurred: {e}")
+        raise e
 
 if __name__ == "__main__":
-    process_activities()
+    fetch_garmin_data()

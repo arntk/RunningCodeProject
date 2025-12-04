@@ -4,12 +4,28 @@ const GarminLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Mock Action: Console log the credentials
         console.log('Sync Data Clicked');
-        console.log('Email:', email);
-        console.log('Password:', password);
+
+        try {
+            const response = await fetch('http://localhost:5000/api/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (response.ok) {
+                alert('Sync Successful!');
+            } else {
+                alert('Sync Failed. Check credentials.');
+            }
+        } catch (error) {
+            console.error('Error syncing:', error);
+            alert('Sync Failed. Check credentials.');
+        }
     };
 
     return (

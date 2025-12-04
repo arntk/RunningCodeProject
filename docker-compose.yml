@@ -32,9 +32,9 @@ services:
     build: ./analytics_engine
     container_name: aerofit_analytics_engine
     restart: always
-    command: python api.py
+    command: python -m flask --app api run --host=0.0.0.0
     ports:
-      - "5001:5001"
+      - "5000:5000"
 
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/aerofit
@@ -51,7 +51,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:5001
+      - VITE_API_URL=http://localhost:5000
 
     volumes:
       - ./frontend:/app

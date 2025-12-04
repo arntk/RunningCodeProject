@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
-from ingest_garmin import process_activities
+from ingest_garmin import fetch_garmin_data
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/api/sync-garmin', methods=['POST'])
+@app.route('/api/sync', methods=['POST'])
 def sync_garmin():
     data = request.get_json()
     if not data:
@@ -25,9 +25,7 @@ def sync_garmin():
     try:
         logger.info(f"Starting sync for user: {email}")
         # Run ingestion logic
-        # Note: process_activities currently prints to stdout, we might want to capture return values later
-        # For now, we assume if it doesn't raise an exception, it worked.
-        process_activities(email, password)
+        fetch_garmin_data(email, password)
         
         # TODO: Run K-Means analysis here
         
