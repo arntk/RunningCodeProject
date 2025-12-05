@@ -1,59 +1,520 @@
-import { useState } from 'react'
-import './App.css'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import GarminLogin from './GarminLogin';
+import React, { useState, useEffect } from 'react';
+import {
+  Activity,
+  BarChart2,
+  Calendar,
+  ChevronRight,
+  Clock,
+  Heart,
+  Lock,
+  MapPin,
+  Menu,
+  TrendingUp,
+  User,
+  Watch,
+  Zap,
+  CheckCircle,
+  Play
+} from 'lucide-react';
 
-function App() {
-  const [data, setData] = useState([
-    { name: '00:00', hr: 70, speed: 0 },
-    { name: '00:05', hr: 85, speed: 5 },
-    { name: '00:10', hr: 110, speed: 8 },
-    { name: '00:15', hr: 130, speed: 9 },
-    { name: '00:20', hr: 145, speed: 9.5 },
-    { name: '00:25', hr: 150, speed: 9 },
-    { name: '00:30', hr: 140, speed: 6 },
-  ]);
+// --- Mock Data & Constants ---
+
+const MOCK_USER = {
+  name: "Alex Runner",
+  vo2max: 54,
+  restingHR: 48,
+  maxHR: 192,
+  thresholdHR: 172, // LTHR
+  thresholdPace: "4:15", // min/km
+};
+
+const ZONES_DATA = {
+  hr: [
+    { zone: "Z1 Recovery", range: "< 135 bpm", desc: "Very light, recovery", color: "bg-gray-500", percent: 15 },
+    { zone: "Z2 Aerobic", range: "135 - 153 bpm", desc: "Base building, all day pace", color: "bg-blue-500", percent: 45 },
+    { zone: "Z3 Tempo", range: "154 - 168 bpm", desc: "Marathon pace, rhythmic", color: "bg-green-500", percent: 25 },
+    { zone: "Z4 Threshold", range: "169 - 175 bpm", desc: "Comfortably hard, 1h effort", color: "bg-orange-500", percent: 10 },
+    { zone: "Z5 VO2 Max", range: "> 175 bpm", desc: "Maximum effort, short intervals", color: "bg-red-500", percent: 5 },
+  ],
+  pace: [
+    { zone: "Recovery", range: "> 5:45 min/km", color: "text-gray-400" },
+    { zone: "Easy", range: "5:00 - 5:45 min/km", color: "text-blue-400" },
+    { zone: "LT1 (Marathon)", range: "4:30 - 5:00 min/km", color: "text-green-400" },
+    { zone: "LT2 (Threshold)", range: "4:05 - 4:25 min/km", color: "text-orange-400" },
+    { zone: "VO2 Max", range: "< 3:55 min/km", color: "text-red-400" },
+  ]
+};
+
+const PREDICTIONS = [
+  { distance: "5k", time: "19:45", pace: "3:57 min/km" },
+  { distance: "10k", time: "41:10", pace: "4:07 min/km" },
+  { distance: "Half Marathon", time: "1:32:15", pace: "4:22 min/km" },
+  { distance: "Marathon", time: "3:15:00", pace: "4:37 min/km" },
+];
+
+const TRAINING_PLAN = [
+  { day: "Mon", type: "Rest", details: "Active recovery or full rest", icon: <User size={16} /> },
+  { day: "Tue", type: "Intervals", details: "15 min WU, 6x800m @ VO2, 15 min CD", icon: <Zap size={16} /> },
+  { day: "Wed", type: "Easy Run", details: "60 mins @ Easy Zone", icon: <Heart size={16} /> },
+  { day: "Thu", type: "Tempo", details: "20 min WU, 30 min @ LT2, 10 min CD", icon: <Activity size={16} /> },
+  { day: "Fri", type: "Recovery", details: "40 mins very easy", icon: <User size={16} /> },
+  { day: "Sat", type: "Long Run", details: "120 mins with last 30 @ LT1", icon: <MapPin size={16} /> },
+  { day: "Sun", type: "Cross Train", details: "Cycling or Swimming 45 mins", icon: <Watch size={16} /> },
+];
+
+// --- Components ---
+
+const Button = ({ children, onClick, className = "", variant = "primary", icon: Icon }) => {
+  const baseStyle = "flex items-center justify-center px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform active:scale-95 shadow-lg";
+  const variants = {
+    primary: "bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-blue-500/25",
+    secondary: "bg-slate-700 hover:bg-slate-600 text-white border border-slate-600",
+    outline: "bg-transparent border border-slate-500 text-slate-300 hover:border-slate-300 hover:text-white",
+    garmin: "bg-[#000000] hover:bg-[#1a1a1a] text-white border border-[#333] shadow-xl" // Dark Garmin-esque button
+  };
 
   return (
-    <div className="app-container">
-      <header className="header">
-        <h1>AeroFit AI</h1>
-        <p>Real-time Workout Monitoring</p>
-      </header>
+    <button onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>
+      {Icon && <Icon className="mr-2 w-5 h-5" />}
+      {children}
+    </button>
+  );
+};
 
-      <main className="dashboard">
-        <div className="left-column">
-          <GarminLogin />
+const Card = ({ children, className = "", delay = 0 }) => (
+  <div
+    className={`bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 animate-fadeInUp ${className}`}
+    style={{ animationDelay: `${delay}ms` }}
+  >
+    {children}
+  </div>
+);
 
-          <div className="card">
-            <h2>Heart Rate & Speed</h2>
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
-                <LineChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Legend />
-                  <Line yAxisId="left" type="monotone" dataKey="hr" stroke="#ff0000" name="Heart Rate (bpm)" />
-                  <Line yAxisId="right" type="monotone" dataKey="speed" stroke="#8884d8" name="Speed (km/h)" />
-                </LineChart>
-              </ResponsiveContainer>
+const StatBox = ({ label, value, sub, icon: Icon, colorClass }) => (
+  <div className="flex items-center space-x-4">
+    <div className={`p-3 rounded-xl bg-slate-800 border border-slate-700 ${colorClass}`}>
+      <Icon className="w-6 h-6" />
+    </div>
+    <div>
+      <p className="text-slate-400 text-sm font-medium">{label}</p>
+      <h3 className="text-2xl font-bold text-white">{value}</h3>
+      {sub && <p className="text-xs text-slate-500">{sub}</p>}
+    </div>
+  </div>
+);
+
+// --- Views ---
+
+const LoginView = ({ onLogin }) => (
+  <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 relative overflow-hidden">
+    {/* Abstract Background Shapes */}
+    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+      <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-cyan-600/20 rounded-full blur-3xl"></div>
+    </div>
+
+    <div className="z-10 w-full max-w-md p-8 bg-slate-900/80 backdrop-blur-xl border border-slate-700 rounded-3xl shadow-2xl text-center">
+      <div className="mb-8 flex justify-center">
+        <div className="w-20 h-20 bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform rotate-3">
+          <Activity className="w-10 h-10 text-white" />
+        </div>
+      </div>
+
+      <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+      <p className="text-slate-400 mb-8">Connect your device to analyze your performance.</p>
+
+      <Button onClick={onLogin} variant="garmin" className="w-full mb-4">
+        Connect Garmin Account
+      </Button>
+
+      <p className="text-xs text-slate-500 mt-6">
+        Secure connection powered by OAuth 2.0.
+        <br />Your data is processed locally.
+      </p>
+    </div>
+  </div>
+);
+
+const LoadingView = ({ onComplete }) => {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setTimeout(onComplete, 800); // Wait a bit at 100%
+          return 100;
+        }
+        return prev + 2; // Speed of loading
+      });
+    }, 40);
+    return () => clearInterval(interval);
+  }, [onComplete]);
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 z-50">
+      <div className="w-64">
+        <div className="flex justify-between mb-2">
+          <span className="text-cyan-400 font-mono text-sm">SYNCING DATA</span>
+          <span className="text-white font-mono text-sm">{progress}%</span>
+        </div>
+        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-100 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="mt-8 text-center text-slate-500 text-sm animate-pulse">
+          Analyzing history...
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Dashboard = () => {
+  const [activeTab, setActiveTab] = useState('analysis');
+  const [showToast, setShowToast] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowToast(false), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'analysis':
+        return (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Top Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card delay={100}>
+                <StatBox
+                  label="VO2 Max"
+                  value={MOCK_USER.vo2max}
+                  sub="Top 5% for your age"
+                  icon={Activity}
+                  colorClass="text-purple-400"
+                />
+              </Card>
+              <Card delay={200}>
+                <StatBox
+                  label="Threshold Pace"
+                  value={MOCK_USER.thresholdPace}
+                  sub="/km"
+                  icon={TrendingUp}
+                  colorClass="text-orange-400"
+                />
+              </Card>
+              <Card delay={300}>
+                <StatBox
+                  label="Resting HR"
+                  value={MOCK_USER.restingHR}
+                  sub="bpm"
+                  icon={Heart}
+                  colorClass="text-red-400"
+                />
+              </Card>
+            </div>
+
+            {/* Analysis Chart: Time in Zones */}
+            <Card delay={400}>
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-white flex items-center">
+                  <BarChart2 className="mr-2 text-cyan-400" /> Training Distribution
+                </h3>
+                <p className="text-slate-400 text-sm">Time spent in heart rate zones (Last 4 Weeks)</p>
+              </div>
+
+              <div className="space-y-4">
+                {ZONES_DATA.hr.map((z, i) => (
+                  <div key={i} className="relative">
+                    <div className="flex justify-between items-end mb-1">
+                      <span className="text-sm font-medium text-slate-300">{z.zone}</span>
+                      <span className="text-sm font-bold text-white">{z.percent}%</span>
+                    </div>
+                    <div className="w-full h-3 bg-slate-700/50 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${z.color} opacity-90 transition-all duration-1000 ease-out`}
+                        style={{ width: `${z.percent}%`, animationDelay: `${i * 100 + 500}ms` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-700/50">
+                <div className="flex items-start space-x-3 bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
+                  <Activity className="text-blue-400 w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-slate-200">
+                      <span className="font-bold text-blue-400">Polarized Training Detected:</span> Good job! You are spending 80% of your time in low intensity zones (Z1+Z2) which helps build aerobic base without overtraining.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        );
+
+      case 'zones':
+        return (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Heart Rate Zones Reference */}
+              <Card delay={100}>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-white flex items-center">
+                    <Heart className="mr-2 text-red-500" /> Zone Definitions
+                  </h3>
+                  <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded">Based on LTHR</span>
+                </div>
+                <div className="space-y-4">
+                  {ZONES_DATA.hr.map((z, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 hover:bg-slate-900 transition-colors border border-transparent hover:border-slate-700">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${z.color}`}></div>
+                        <div>
+                          <p className="text-white font-medium">{z.zone}</p>
+                          <p className="text-xs text-slate-500">{z.desc}</p>
+                        </div>
+                      </div>
+                      <span className="text-slate-300 font-mono font-bold">{z.range}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Pace Zones Reference */}
+              <Card delay={200}>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-white flex items-center">
+                    <Watch className="mr-2 text-cyan-500" /> Pace Zones
+                  </h3>
+                  <span className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded">Based on 5k/10k</span>
+                </div>
+                <div className="space-y-4">
+                  {ZONES_DATA.pace.map((z, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/50 hover:bg-slate-900 transition-colors border border-transparent hover:border-slate-700">
+                      <div>
+                        <p className={`font-medium ${z.color}`}>{z.zone}</p>
+                      </div>
+                      <span className="text-slate-300 font-mono font-bold">{z.range}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </div>
+        );
+
+      case 'plan':
+        return (
+          <div className="animate-fadeIn">
+            <Card>
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-bold text-white">This Week's Plan</h3>
+                  <p className="text-slate-400">Phase: Base Building • Week 4 of 12</p>
+                </div>
+                <Button variant="outline" className="text-sm py-2 px-4">Regenerate Plan</Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {TRAINING_PLAN.map((day, i) => (
+                  <div key={i} className={`p-4 rounded-2xl border ${day.type === 'Rest' ? 'bg-slate-800/30 border-slate-800' : 'bg-slate-800 border-slate-700'} hover:border-cyan-500/50 transition-all group`}>
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-slate-400 font-mono text-sm">{day.day}</span>
+                      <div className={`p-1.5 rounded-lg ${day.type === 'Rest' ? 'bg-slate-700 text-slate-400' : 'bg-cyan-900/50 text-cyan-400'}`}>
+                        {day.icon}
+                      </div>
+                    </div>
+                    <h4 className="text-white font-bold mb-1">{day.type}</h4>
+                    <p className="text-sm text-slate-400 leading-relaxed">{day.details}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        );
+
+      case 'predictions':
+        return (
+          <div className="animate-fadeIn">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <Card>
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                  <TrendingUp className="mr-2 text-green-500" /> Race Predictor
+                </h3>
+                <div className="space-y-1">
+                  {PREDICTIONS.map((pred, i) => (
+                    <div key={i} className="flex justify-between items-center py-4 border-b border-slate-700/50 last:border-0 hover:bg-slate-800/50 px-2 rounded-lg transition-colors">
+                      <span className="text-slate-300 font-medium">{pred.distance}</span>
+                      <div className="text-right">
+                        <div className="text-white font-bold font-mono text-lg">{pred.time}</div>
+                        <div className="text-slate-500 text-xs font-mono">{pred.pace}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <div className="p-6">
+                <h2 className="text-3xl font-bold text-white mb-4">Your Potential</h2>
+                <p className="text-slate-400 mb-6 leading-relaxed">
+                  Based on your recent VO2 Max of <span className="text-cyan-400 font-bold">54</span> and Lactate Threshold data,
+                  you are currently trending towards a sub-3:20 marathon. Focus on LT1 volume to improve efficiency.
+                </p>
+                <div className="p-4 bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-500/20 rounded-xl">
+                  <div className="flex items-start">
+                    <div className="bg-blue-500/20 p-2 rounded-lg mr-3">
+                      <Zap className="text-blue-400 w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold text-sm">AI Recommendation</h4>
+                      <p className="text-slate-400 text-xs mt-1">Increase tempo run duration by 5 mins next week to improve 10k time.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-200 font-sans selection:bg-cyan-500/30">
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed bottom-8 right-8 bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-3 z-50 animate-bounce-in">
+          <CheckCircle className="w-5 h-5" />
+          <span className="font-semibold">Data successfully loaded from Garmin</span>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <nav className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-tr from-blue-600 to-cyan-500 p-2 rounded-lg">
+                <Activity className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white tracking-tight">Kinetix<span className="text-cyan-400">.AI</span></span>
+            </div>
+
+            {/* Desktop Tabs */}
+            <div className="hidden md:flex space-x-1 bg-slate-800/50 p-1 rounded-xl">
+              {[
+                { id: 'analysis', label: 'Analysis' },
+                { id: 'zones', label: 'Zones' },
+                { id: 'plan', label: 'Training Plan' },
+                { id: 'predictions', label: 'Predictions' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold text-white">{MOCK_USER.name}</p>
+                <p className="text-xs text-slate-500">Connected</p>
+              </div>
+              <div className="h-10 w-10 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700">
+                <User className="w-5 h-5 text-slate-400" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <h2>AI Analysis</h2>
-          <div className="ai-feedback">
-            <p>Status: <strong>Analyzing...</strong></p>
-            <p>Intensity: <span className="tag">Just Right</span></p>
+        {/* Mobile Tab Menu (Simplified) */}
+        <div className="md:hidden border-t border-slate-800 overflow-x-auto">
+          <div className="flex p-2 space-x-2 min-w-max">
+            {[
+              { id: 'analysis', label: 'Analysis' },
+              { id: 'zones', label: 'Zones' },
+              { id: 'plan', label: 'Plan' },
+              { id: 'predictions', label: 'Predict' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${activeTab === tab.id
+                    ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                    : 'text-slate-500'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
+        {renderContent()}
       </main>
     </div>
-  )
-}
+  );
+};
 
-export default App
+// --- Main App Component ---
+
+const App = () => {
+  const [authState, setAuthState] = useState('login'); // login, loading, dashboard
+
+  const handleLogin = () => {
+    setAuthState('loading');
+  };
+
+  const handleLoadComplete = () => {
+    setAuthState('dashboard');
+  };
+
+  return (
+    <>
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeInUp {
+          animation: fadeInUp 0.6s ease-out forwards;
+          opacity: 0; 
+        }
+        .animate-fadeIn {
+          animation: fadeInUp 0.5s ease-out forwards;
+        }
+        @keyframes bounceIn {
+            0% { transform: translateY(100px); opacity: 0; }
+            60% { transform: translateY(-10px); opacity: 1; }
+            100% { transform: translateY(0); }
+        }
+        .animate-bounce-in {
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+      `}</style>
+
+      {authState === 'login' && <LoginView onLogin={handleLogin} />}
+      {authState === 'loading' && <LoadingView onComplete={handleLoadComplete} />}
+      {authState === 'dashboard' && <Dashboard />}
+    </>
+  );
+};
+
+export default App;
